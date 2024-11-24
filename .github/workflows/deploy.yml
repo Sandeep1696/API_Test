@@ -3,36 +3,36 @@ name: Deploy to Docker Hub
 on:
   push:
     branches:
-      - master  # Or change to 'main' if that's your default branch
+      - master  # Change to 'main' if that's your default branch
   workflow_dispatch:  # For manual trigger
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest  # Using GitHub-hosted runner for simplicity
+    runs-on: ubuntu-latest  # GitHub-hosted runner
 
     steps:
-    # Step 1: Check out the repository
     - name: Check out the repository
       uses: actions/checkout@v2
 
-    # Step 2: Log in to Docker Hub
     - name: Log in to Docker Hub
       run: |
         echo "${{ secrets.USER_PASSWORD_TOKEN }}" | docker login -u "${{ secrets.USER_NAME_DOCKER }}" --password-stdin
         docker info  # Verify Docker is set up correctly
       shell: bash
 
-    # Step 3: Build and push Docker image
-    - name: Build and push Docker image
+    - name: Build Docker image
       run: |
         docker build -t sandeep1696/api_test:${{ github.sha }} .
+        docker images  # Verify the image was built
+      shell: bash
+
+    - name: Push Docker image to Docker Hub
+      run: |
         docker push sandeep1696/api_test:${{ github.sha }}
       shell: bash
-      env:
-        DOCKER_BUILDKIT: 1  # Use Docker BuildKit for better build logs
 
-    # Optional: Deploy Docker container (only if needed)
-    - name: Deploy to Docker container
+    - name: Deploy to Docker container (optional)
       run: |
         docker run -d -p 80:80 --name api_test_${{ github.sha }} sandeep1696/api_test:${{ github.sha }}
+        docker ps  # Verify the container is running
       shell: bash

@@ -3,12 +3,12 @@ name: Deploy to Docker Hub
 on:
   push:
     branches:
-      - master  # Trigger on push to the master branch
-  workflow_dispatch:  # Allows manual trigger from the Actions tab
+      - master  # Or change to 'main' if that's your default branch
+  workflow_dispatch:  # For manual trigger
 
 jobs:
-  build-and-deploy:
-    runs-on: self-hosted  # Use the self-hosted runner (optional)
+  build-and-push:
+    runs-on: ubuntu-latest  # Using GitHub-hosted runner for simplicity
 
     steps:
     # Step 1: Check out the repository
@@ -18,28 +18,21 @@ jobs:
     # Step 2: Log in to Docker Hub
     - name: Log in to Docker Hub
       run: |
-        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        echo "${{ secrets.USER_PASSWORD_TOKEN }}" | docker login -u "${{ secrets.USER_NAME_DOCKER }}" --password-stdin
+        docker info  # Verify Docker is set up correctly
       shell: bash
 
-    # Step 3: Build and push Docker image to Docker Hub
+    # Step 3: Build and push Docker image
     - name: Build and push Docker image
       run: |
-        # Build Docker image with tag using commit hash
         docker build -t sandeep1696/api_test:${{ github.sha }} .
-        
-        # Push Docker image to Docker Hub
         docker push sandeep1696/api_test:${{ github.sha }}
       shell: bash
+      env:
+        DOCKER_BUILDKIT: 1  # Use Docker BuildKit for better build logs
 
-    # Step 4: Deploy Docker container (optional)
+    # Optional: Deploy Docker container (only if needed)
     - name: Deploy to Docker container
       run: |
         docker run -d -p 80:80 --name api_test_${{ github.sha }} sandeep1696/api_test:${{ github.sha }}
-      shell: bash
-
-    # Step 5: Verify if the container is running (optional)
-    - name: Verify Docker container
-      run: |
-        docker ps -a  # List all containers to verify the container is running
-        docker logs api_test_${{ github.sha }}  # Show logs for the container
       shell: bash

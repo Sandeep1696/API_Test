@@ -1,66 +1,45 @@
-name: Deploy to Docker
+name: Deploy to Docker Hub
 
 on:
   push:
     branches:
-      - master
-  workflow_dispatch: # Enables manual trigger for testing
+      - master  # Trigger on push to the master branch
+  workflow_dispatch:  # Allows manual trigger from the Actions tab
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted # Ensure self-hosted runner is online
-
-    env:
-      # Enable debug logs for troubleshooting
-      ACTIONS_RUNNER_DEBUG: true
-      ACTIONS_STEP_DEBUG: true
+    runs-on: self-hosted  # Use the self-hosted runner (optional)
 
     steps:
     # Step 1: Check out the repository
     - name: Check out the repository
       uses: actions/checkout@v2
 
-    # Step 2: Ensure Docker is installed and accessible
-    - name: Verify Docker installation
-      run: |
-        docker --version
-        docker info
-      shell: bash
-
-    # Step 3: Log in to Docker Hub
+    # Step 2: Log in to Docker Hub
     - name: Log in to Docker Hub
       run: |
-        if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
-          echo "DOCKER_PASSWORD secret is not set"
-          exit 1
-        fi
         echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
       shell: bash
 
-    # Step 4: Build and push Docker image
+    # Step 3: Build and push Docker image to Docker Hub
     - name: Build and push Docker image
       run: |
+        # Build Docker image with tag using commit hash
         docker build -t sandeep1696/api_test:${{ github.sha }} .
+        
+        # Push Docker image to Docker Hub
         docker push sandeep1696/api_test:${{ github.sha }}
       shell: bash
-      env:
-        DOCKER_BUILDKIT: 1 # Enable Docker BuildKit for better build output
 
-    # Step 5: Deploy the Docker container
+    # Step 4: Deploy Docker container (optional)
     - name: Deploy to Docker container
       run: |
         docker run -d -p 80:80 --name api_test_${{ github.sha }} sandeep1696/api_test:${{ github.sha }}
       shell: bash
 
-    # Step 6: Verify the container is running
-    - name: Verify the Docker container
+    # Step 5: Verify if the container is running (optional)
+    - name: Verify Docker container
       run: |
-        docker ps -a
-        docker logs api_test_${{ github.sha }}
-      shell: bash
-
-    # Step 7: Debug network issues (optional)
-    - name: Verify network and port binding
-      run: |
-        curl -I http://localhost:80 || echo "Failed to reach the deployed container on port 80"
+        docker ps -a  # List all containers to verify the container is running
+        docker logs api_test_${{ github.sha }}  # Show logs for the container
       shell: bash
